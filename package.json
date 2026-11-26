@@ -1,0 +1,24 @@
+{
+  "name": "prompt-injection-checkout-guard",
+  "version": "1.0.0",
+  "description": "Red-team benchmark and zero-trust server-side price-lock guardrail defending LLM e-commerce checkout agents against prompt injection.",
+  "type": "module",
+  "main": "src/guard.mjs",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "keywords": [
+    "ai-security",
+    "prompt-injection",
+    "llm-guardrails",
+    "red-team",
+    "appsec",
+    "ecommerce",
+    "zero-trust"
+  ],
+  "author": "Khalef Abdelmadjid (@JARMID)",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
