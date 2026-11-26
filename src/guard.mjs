@@ -25,7 +25,7 @@ export const INJECTION_PATTERNS = [
   },
   {
     id: "unbounded_discount",
-    rx: /\b(9[0-9]%|100%|99\.9%|unlimited|admin|vip|internal|staff|free)\b.{0,25}\b(discount|coupon|promo|voucher|off|rebate)\b/i,
+    rx: /(?:\b(?:9[0-9]|100|99\.9)%(?!\w)|\b(?:unlimited|admin|vip|internal|staff|free)\b).{0,25}\b(discount|coupon|promo|voucher|off|rebate)\b/i,
   },
   {
     id: "tool_smuggling",
@@ -190,6 +190,11 @@ export function executeGuardedCheckout({
     return { ok: false, status: 500, reason: "invalid_server_catalog_record", injectionScan: scan };
   }
 
+  const subtotalMinor = product.priceMinor * quantity;
+  if (!Number.isSafeInteger(subtotalMinor)) {
+    return { ok: false, status: 422, reason: "order_total_overflow", injectionScan: scan };
+  }
+
   // Layer 5: Server-authoritative pricing & prototype-safe bounded coupon verification
   let discountMinor = 0;
   let appliedCoupon = null;
@@ -213,14 +218,12 @@ export function executeGuardedCheckout({
       return { ok: false, status: 422, reason: "invalid_or_inactive_coupon", injectionScan: scan };
     }
     const maxAllowedPct = Math.min(coupon.percentOff, 30); // Hard policy ceiling: 30% max
-    discountMinor = Math.floor((product.priceMinor * quantity * maxAllowedPct) / 100);
+    // Exact BigInt basis-point arithmetic avoids intermediate precision loss near MAX_SAFE_INTEGER
+    const bps = BigInt(Math.round(maxAllowedPct * 100));
+    discountMinor = Number((BigInt(subtotalMinor) * bps) / 10000n);
     appliedCoupon = code;
   }
 
-  const subtotalMinor = product.priceMinor * quantity;
-  if (!Number.isSafeInteger(subtotalMinor)) {
-    return { ok: false, status: 422, reason: "order_total_overflow", injectionScan: scan };
-  }
   const finalTotalMinor = subtotalMinor - discountMinor;
 
   return {
